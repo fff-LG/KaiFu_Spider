@@ -34,7 +34,9 @@ class KaifuBlogSpider(scrapy.Spider):
                 '//h3/text() | '  # 第一页：h3直接包含文本
                 './following-sibling::div[contains(@class, "articalTag")][1]'
                 '//td[@class="blog_tag"]'
-                '//h3//a/text()'  # 后续页：h3下的a标签包含文本
+                '//h3//a/text() |'  # 后续页：h3下的a标签包含文本
+                './following-sibling::div[contains(@class, "articalTag")][1]'
+                '//td[@class="blog_class"]//a/text()' # 最后几页：在blog_class下的a标签文本
             ).extract()
             item["articleTags"] = [tag.strip() for tag in item["articleTags"] if tag.strip()]
 
