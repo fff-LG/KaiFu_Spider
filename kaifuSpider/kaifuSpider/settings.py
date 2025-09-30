@@ -99,6 +99,6 @@ DOWNLOAD_DELAY = 1  # 每次请求间隔 1 秒
 MONGODB_CONNECTION_STRING = "mongodb://localhost:27017/"
 MONGODB_DATABASE = "KaiFu_blog"
 
-# ITEM_PIPELINES = {
-#     "kaifuSpider.pipelines.MongoDBPipeline": 1,
-# }
+ITEM_PIPELINES = {
+    "kaifuSpider.pipelines.MongoDBPipeline": 1,
+}

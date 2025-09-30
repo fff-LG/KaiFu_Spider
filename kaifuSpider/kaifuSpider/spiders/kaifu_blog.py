@@ -4,8 +4,10 @@ from ..items import KaifuspiderItem
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
-from webdriver_manager.chrome import ChromeDriverManager
+
 
 
 
@@ -16,17 +18,8 @@ class KaifuBlogSpider(scrapy.Spider):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 初始化WebDriver
-        chromedriver_path = r"E:\chromedriver-win64\chromedriver.exe"  # 替换为实际路径
-        self.driver = webdriver.Chrome(
-            service=Service(chromedriver_path)
-        )
+        self.chromedriver_path = r"E:\chromedriver-win64\chromedriver.exe"  # 仅保存路径，不初始化driver
 
-    def closed(self, reason):
-        # 爬虫关闭时退出浏览器
-        if hasattr(self, 'driver') and self.driver:
-            self.driver.quit()
-            self.logger.info("浏览器已关闭")
 
     def parse(self, response, **kwargs):
 
@@ -137,18 +130,26 @@ class KaifuBlogSpider(scrapy.Spider):
             self.logger.warning(f'详情页未找到正文容器，URL: {response.url}')
             item['content'] = ''
 
+            # 为每个详情页创建独立的driver实例
+        driver = None
         try:
-            # 访问详情页获取动态数据
-            self.driver.get(response.url)
-            time.sleep(3)  # 延长等待时间确保加载完成
+            driver = webdriver.Chrome(service=Service(self.chromedriver_path))
+            driver.get(response.url)
+
+            # 使用显式等待替代固定等待
+            wait = WebDriverWait(driver, 10)  # 最长等待10秒
 
             # 10.爬取喜欢数
-            like_element = self.driver.find_element(By.XPATH, '//div[@class="upBox upBox_click"]/p[@class="count"]')
+            like_element = wait.until(
+                EC.presence_of_element_located((By.XPATH, '//div[@class="upBox upBox_click"]/p[@class="count"]'))
+            )
             like = like_element.text.strip()
             item['like_count'] = int(like) if like.isdigit() else 0
 
             # 11.爬取赠金笔数量
-            gold_pan_element = self.driver.find_element(By.ID, 'goldPan-num')
+            gold_pan_element = wait.until(
+                EC.presence_of_element_located((By.ID, 'goldPan-num'))
+            )
             gold_pan_count = gold_pan_element.text.strip()
             item['goldPan'] = int(gold_pan_count) if gold_pan_count.isdigit() else 0
 
@@ -156,6 +157,10 @@ class KaifuBlogSpider(scrapy.Spider):
             self.logger.error(f"详情页动态数据爬取失败: {str(e)}，URL: {response.url}")
             item['like_count'] = 0
             item['goldPan'] = 0
+        finally:
+            # 确保driver关闭
+            if driver:
+                driver.quit()
 
 
         yield item
